@@ -1,9 +1,14 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useCart } from "../context/CartContext";
 
 const ProductDetails = () => {
   const [product, setProduct] = useState(null);
   const { id } = useParams();
+
+  const cart = useCart();
+  console.log(cart);
+  
 
   const fetchProduct = async () => {
     const res = await fetch(`https://dummyjson.com/products/${id}`);
@@ -30,7 +35,10 @@ const ProductDetails = () => {
           <p>{product?.rating} / 5</p>
           <p className="text-center">{product?.description}</p>
           <div className="card-actions justify-end">
-            <div className="badge badge-outline btn btn-primary hover:shadow-lg hover:shadow-purple-500/50">
+            <div
+              className="badge badge-outline btn btn-primary hover:shadow-lg hover:shadow-purple-500/50"
+              onClick={() => cart.setItems([...cart.items, {name: product?.title, price: product?.price}])}
+            >
               Add to Cart
             </div>
             <div className="badge badge-outline btn btn-primary hover:shadow-lg hover:shadow-purple-500/50">
