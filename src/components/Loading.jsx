@@ -1,15 +1,12 @@
-import React from 'react'
-
 const Loading = () => {
   return (
-    <div className="flex w-52 flex-col gap-4">
-  <div className="skeleton h-32 w-full"></div>
-  <div className="skeleton h-4 w-28"></div>
-  <div className="skeleton h-4 w-full"></div>
-  <div className="skeleton h-4 w-full"></div>
-</div>
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="text-center">
+        <div className="loading loading-dots loading-lg"></div>
+        <p className="mt-2 text-gray-400">Loading products...</p>
+      </div>
+    </div>
+  );
+};
 
-  )
-}
-
-export default Loading
+export default Loading;

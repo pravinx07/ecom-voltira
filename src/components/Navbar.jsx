@@ -1,100 +1,160 @@
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
-import { Link } from "react-router-dom";
-import Cart from "../pages/Cart";
-import Home from  "../pages/Home"
+import { useWishlist } from "../context/WishlistContext";
 
 const Navbar = () => {
-  const CartState = useCart();
+  const { items } = useCart();
+  const { wishlist } = useWishlist();
+  const navigate = useNavigate();
+
+  const [search, setSearch] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const dropdownRef = useRef(null);
+
+  // Close suggestion dropdown if clicked outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
+
+  // 🔎 Debounced API search
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (search.trim().length > 0) {
+        fetchSuggestions(search); 
+      } else {
+        setSuggestions([]);
+      }
+    }, 350);
+
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  const fetchSuggestions = async (q) => {
+    try {
+      const res = await fetch(
+        `https://dummyjson.com/products/search?q=${encodeURIComponent(q)}`
+      );
+      const data = await res.json();
+      setSuggestions(data.products.slice(0, 6));
+      setShowDropdown(true);
+    } catch {
+      setSuggestions([]);
+    }
+  };
+
+  // 🔥 FIX: navigate ONLY here, NOT in useEffect
+  const handleSearchInput = (e) => {
+    const value = e.target.value;
+    setSearch(value);
+
+    if (value.trim().length === 0) {
+      navigate("/");
+    } else {
+      navigate(`/?search=${encodeURIComponent(value)}`);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearch("");
+    setSuggestions([]);
+    setShowDropdown(false);
+    navigate("/");
+  };
+
+  const goToProduct = (id) => {
+    setSearch("");
+    setSuggestions([]);
+    setShowDropdown(false);
+    navigate(`/product/${id}`);
+  };
+
+  // Dark mode toggle
+  const toggleTheme = () => {
+    const curr = document.documentElement.getAttribute("data-theme") || "light";
+    document.documentElement.setAttribute("data-theme", curr === "light" ? "dark" : "light");
+  };
 
   return (
-    <div className="navbar bg-base-100 shadow-sm">
+    <div className="navbar bg-base-100 shadow-md fixed top-0 left-0 w-full z-50 px-4">
       <div className="flex-1">
-        <Link to="/" element={<Home/>}><h1 className="btn btn-ghost text-2xl text-secondary">🛍️ ShopEase</h1></Link>
+        <Link to="/" className="btn btn-ghost text-2xl text-secondary">🛍️ ShopEase</Link>
       </div>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          placeholder="Search for Products, Brands and More"
-          className="input input-bordered w-96 "
-        />
 
-        <div className="flex-none">
-          <div className="dropdown dropdown-end">
-            <div
-              tabIndex={0}
-              role="button"
-              className="btn btn-ghost btn-circle"
-            >
-              <div className="indicator">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+      <div className="flex gap-4 items-center" ref={dropdownRef}>
+        {/* Search Input */}
+        <div className="relative w-full max-w-xs md:w-96">
+          <input
+            type="text"
+            placeholder="Search products..."
+            className="input input-bordered w-full"
+            value={search}
+            onChange={handleSearchInput}
+            onFocus={() => search && setShowDropdown(true)}
+          />
+
+          {/* Clear button */}
+          {search && (
+            <button className="absolute right-3 top-3 text-gray-400" onClick={clearSearch}>
+              ✖
+            </button>
+          )}
+
+          {/* Suggestions */}
+          {showDropdown && suggestions.length > 0 && (
+            <ul className="absolute bg-base-100 border border-gray-700 w-full mt-1 rounded-lg shadow-xl z-50">
+              {suggestions.map((item) => (
+                <li
+                  key={item.id}
+                  className="p-2 flex items-center gap-3 hover:bg-base-300 cursor-pointer"
+                  onClick={() => goToProduct(item.id)}
                 >
-                  {" "}
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-                  />{" "}
-                </svg>
-                <span className="badge badge-sm indicator-item">
-                  {CartState.items.length}
-                </span>
-              </div>
-            </div>
-            <div
-              tabIndex={0}
-              className="card card-compact dropdown-content bg-base-100 z-1 mt-3 w-52 shadow"
-            >
-              <div className="card-body">
-                <span className="text-lg font-bold">{CartState.items.length} Items</span>
-                
-                <div className="card-actions">
-                  <Link to="/cart" element={<Cart/>}>
-                  <button className="btn btn-primary btn-block">
-                    View cart
-                  </button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
+                  <img src={item.thumbnail} className="w-10 h-10 rounded object-cover" />
+                  <span className="truncate">{item.title}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        <div className="dropdown dropdown-end">
-          <div
-            tabIndex={0}
-            role="button"
-            className="btn btn-ghost btn-circle avatar"
-          >
-            <div className="w-10 rounded-full">
-              <img
-                alt="Tailwind CSS Navbar component"
-                src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
-              />
+        {/* Cart */}
+        <Link to="/cart">
+          <div className="btn btn-ghost btn-circle">
+            <div className="indicator">
+              <span className="badge badge-sm badge-primary indicator-item">{items.length}</span>
+              🛒
             </div>
           </div>
-          <ul
-            tabIndex="-1"
-            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
-          >
-            <li>
-              <a className="justify-between">
-                Profile
-                <span className="badge">New</span>
-              </a>
-            </li>
-            <li>
-              <a>Settings</a>
-            </li>
-            <li>
-              <a>Logout</a>
-            </li>
-          </ul>
+        </Link>
+
+        {/* Wishlist */}
+        <Link to="/wishlist">
+          <div className="btn btn-ghost btn-circle">
+            <div className="indicator">
+              <span className="badge badge-sm badge-secondary indicator-item">{wishlist.length}</span>
+              ❤️
+            </div>
+          </div>
+        </Link>
+
+        {/* Dark mode */}
+        <button className="btn btn-ghost btn-circle" onClick={toggleTheme}>
+          🌗
+        </button>
+
+        {/* Avatar */}
+        <div className="avatar">
+          <div className="w-10 rounded-full">
+            <img src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" />
+          </div>
         </div>
       </div>
     </div>
